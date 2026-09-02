@@ -1,0 +1,54 @@
+name: CI/CD Pipeline
+on:
+  push:
+    branches:
+      - dev # When pushed to dev branch...
+jobs: 
+
+  Tests: # Run unit test job
+    runs-on: ubuntu-24.04
+    steps:
+
+      - name: Get code # Get new code
+        uses: actions/checkout@v4 
+
+      - name: Install NodeJS # Install/Update NodeJS on the Ubuntu runner
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20" # App uses NodeJS v20
+
+      - name: Cache dependencies # Cache the following dependency installs if cache is not already full, otherwise use the cache.
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm # Place cache in the Home folder of the Ubuntu runner
+
+          # Generates a hash key based off of the files saved. If the hash key doesn't match subsequently, rebuilds the cache
+          # E.g. Ubuntu-npm-a81f92c...
+          key: ${{ runner.os }}-npm-${{ hashFiles('package-lock.json') }}
+
+      - name: Install dependencies
+        run: npm ci # npm "Clean Install" installs dependencies directly from package-lock.json and uses package.json to validate versions
+  
+      - name: Run tests # Run the unit tests
+        run: npm test # (points to `node --test` in package.json)
+
+  Package: # Package the app for the VM EC2 instance
+    needs: Tests
+    runs-on: ubuntu-24.04
+    steps:
+
+      - name: Get code
+        uses: actions/checkout@v4
+      
+      - name: Create application archive
+        run: |
+          tar \
+            --exclude='.git' \
+            --exclude='node_modules' \
+            -czf sparta-app.tar.gz .
+      
+      - name: Upload application artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sparta-app
+          path: sparta-app.tar.gz

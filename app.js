@@ -7,6 +7,7 @@ async function requestJson(url, options) {
 	return data;
 }
 
+// Useless comment
 function defaultGameState() {
 	return {
 		board: ['', '', '', '', '', '', '', '', ''],
