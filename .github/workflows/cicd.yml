@@ -1,8 +1,14 @@
 name: CI/CD Pipeline
+
 on:
   push:
     branches:
       - dev # When pushed to dev branch...
+
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs: 
 
   Tests: # Run unit test job
@@ -32,6 +38,35 @@ jobs:
       - name: Run tests # Run the unit tests
         run: npm test # (points to `node --test` in package.json)
 
+  Merge:
+    needs: Tests
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Get code
+        uses: actions/checkout@v4 
+
+      - name: Create PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr create \
+            --base main \
+            --head dev \
+            --title "Auto-merge dev into main" \
+            --body "Automated PR after successful dev tests." \
+            || true
+
+      - name: Enable auto-merge
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr merge dev \
+            --base main \
+            --auto \
+            --squash
+
   Package: # Package the app for the VM EC2 instance
     needs: Tests
     runs-on: ubuntu-24.04
@@ -52,3 +87,21 @@ jobs:
         with:
           name: sparta-app
           path: sparta-app.tar.gz
+  
+  Deploy:
+    needs: Package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+    
+      - name: Deploy to EC2
+        env:
+          PRIVATE_KEY: ${{ secrets.EC2_PRIVATE_KEY }}
+          HOST: ${{ secrets.EC2_HOST }}
+          USER: ${{ secrets.EC2_USER }}
+        run: |
+          echo "$PRIVATE_KEY" > github-ec2.pem && chmod 600 github-ec2.pem
+          ssh -o StrictHostKeyChecking=no -i github-ec2.pem ${USER}@${HOST} '
+          echo "Current directory: $(pwd)"
+          echo "Listing home directory:"
+          ls -la ~
