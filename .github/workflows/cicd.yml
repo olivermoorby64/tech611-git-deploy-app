@@ -63,30 +63,29 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh pr merge dev \
-            --base main \
-            --auto \
-            --squash
+          --auto \
+          --squash
 
-  Package: # Package the app for the VM EC2 instance
+  Package: # Package the app ready for VM to use
     needs: Tests
     runs-on: ubuntu-24.04
-    steps:
 
+    steps:
       - name: Get code
         uses: actions/checkout@v4
-      
+
       - name: Create application archive
         run: |
           tar \
             --exclude='.git' \
             --exclude='node_modules' \
-            -czf sparta-app.tar.gz .
-      
-      - name: Upload application artifact
+            -czf /tmp/sparta-app.tar.gz .
+
+      - name: Upload app as artifact
         uses: actions/upload-artifact@v4
         with:
           name: sparta-app
-          path: sparta-app.tar.gz
+          path: /tmp/sparta-app.tar.gz
   
   Deploy:
     needs: Package
