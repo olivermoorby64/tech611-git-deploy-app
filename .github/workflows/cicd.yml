@@ -152,5 +152,7 @@ jobs:
                 tar -xzf ~/sparta-app.tar.gz -C ~/sparta-app
 
                 cd ~/sparta-app
-                nohup npm start > app.log 2>&1 &
+                npm install
+                pm2 delete all
+                pm2 start index.js --name myapp
               '
