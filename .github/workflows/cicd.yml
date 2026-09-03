@@ -122,7 +122,7 @@ jobs:
           scp -o StrictHostKeyChecking=no \
             -i github-ec2.pem \
             ./artifact/sparta-app.tar.gz \
-            "${EC2_USERNAME}@${USER}:~/sparta-app.tar.gz"
+            "${USER}@${HOST}:~/sparta-app.tar.gz"
 
   Deploy:
 
