@@ -149,6 +149,5 @@ jobs:
 
                 tar -xzf ~/sparta-app.tar.gz -C ~/sparta-app
 
-                echo "Application deployed:"
-                ls -la ~/sparta-app
+                npm start
               '
