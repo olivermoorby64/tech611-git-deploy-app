@@ -149,5 +149,6 @@ jobs:
 
                 tar -xzf ~/sparta-app.tar.gz -C ~/sparta-app
 
+                cd ~/sparta-app
                 npm start
               '
