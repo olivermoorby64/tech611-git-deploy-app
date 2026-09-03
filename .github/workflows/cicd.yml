@@ -12,6 +12,7 @@ permissions:
 jobs: 
 
   Tests: # Run unit test job
+
     runs-on: ubuntu-24.04
     steps:
 
@@ -39,6 +40,7 @@ jobs:
         run: npm test # (points to `node --test` in package.json)
 
   Merge:
+
     needs: Tests
     runs-on: ubuntu-24.04
 
@@ -57,7 +59,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-      - name: Merge dev into main
+      - name: Merge dev into main via promote # Promote dev to main, prefer dev in the event of conflicts
         run: |
           git fetch origin main dev
 
@@ -65,11 +67,12 @@ jobs:
             -X theirs \
             --no-edit
 
-      - name: Push main
+      - name: Push main # Update main
         run: |
           git push origin main
 
   Package: # Package the app ready for VM to use
+
     needs: Merge
     runs-on: ubuntu-24.04
 
@@ -77,25 +80,51 @@ jobs:
       - name: Get code
         uses: actions/checkout@v4
 
-      - name: Create application archive # Place app files into a compressed archive, will need to extract later
+      - name: Archive app # Place app files into a compressed archive, will need to extract later
         run: |
           tar \
             --exclude='.git' \
             --exclude='node_modules' \
             -czf /tmp/sparta-app.tar.gz .
 
-      - name: Upload app as artifact
+      - name: Upload archive as artifact
         uses: actions/upload-artifact@v4
         with:
           name: sparta-app
           path: /tmp/sparta-app.tar.gz
   
-  Deploy:
+  Send:
+
     needs: Package
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v2
+
+      - name: Get code
+        uses: actions/checkout@v4
+
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: sparta-app
+          path: ./artifact
     
+      - name: Send app archive to EC2
+        env:
+          PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
+          HOST: ${{ secrets.EC2_HOSTNAME }}
+          USER: ${{ secrets.EC2_USERNAME }}
+        run: |
+          scp -o StrictHostKeyChecking=no \
+          =-i github-ec2.pem \
+          ./artifact/sparta-app.tar.gz \
+          ${EC2_USER}@${EC2_HOST}:~/sparta-app.tar.gz"
+
+  Deploy:
+
+    needs: Send
+    runs-on: ubuntu-24.04
+    steps:
+
       - name: Connect to EC2
         env:
           PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
@@ -104,11 +133,16 @@ jobs:
         run: |
           echo "$PRIVATE_KEY" > github-ec2.pem && chmod 600 github-ec2.pem
           ssh -o StrictHostKeyChecking=no -i github-ec2.pem ${USER}@${HOST}
-          echo "Current directory: $(pwd)"
-          echo "Listing home directory:"
-          ls -la ~
         
         # The command places the SSH key into a pem file and adjusts permissions
         # Constructs command to connect to AWS VM
-        # Runs three basic commands to test functionality
-        # (test2)
+
+      - name: Access delivery archive
+        run: |
+          mkdir -p ~/sparta-app
+          tar -xzf ~/sparta-app.tar.gz -C ~/sparta-app
+      
+      - name: Run app
+        run: |
+          cd ~/sparta-app
+          ls -a
