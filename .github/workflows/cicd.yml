@@ -11,15 +11,15 @@ permissions:
 
 jobs: 
 
-  Tests: # Run unit test job
+  Tests: # Run unit tests before promoting dev to main
 
     runs-on: ubuntu-24.04
     steps:
 
-      - name: Get code # Get new code
+      - name: Get code # Check out the commit that triggered the workflow
         uses: actions/checkout@v4 
 
-      - name: Install NodeJS # Install/Update NodeJS on the Ubuntu runner
+      - name: Install NodeJS # Install/Update NodeJS on the Ubuntu runner to the version the app uses
         uses: actions/setup-node@v4
         with:
           node-version: "20" # App uses NodeJS v20
@@ -59,7 +59,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-      - name: Merge dev into main via promote # Promote dev to main, prefer dev in the event of conflicts
+      - name: Merge dev into main via promote # Promote dev to main; prefer dev changes if conflicts occur
         run: |
           git fetch origin main dev
 
@@ -67,7 +67,7 @@ jobs:
             -X theirs \
             --no-edit
 
-      - name: Push main # Update main
+      - name: Push main # Publish new merged main branch
         run: |
           git push origin main
 
@@ -80,27 +80,29 @@ jobs:
       - name: Get code
         uses: actions/checkout@v4
 
-      - name: Archive app # Place app files into a compressed archive, will need to extract later
+      - name: Archive app # Compress app into archive ready to be sent, must be extracted later
         run: |
           tar \
             --exclude='.git' \
             --exclude='node_modules' \
             -czf /tmp/sparta-app.tar.gz .
 
-      - name: Upload archive as artifact
+      - name: Upload archive as artifact # Upload as artifact for other Git VMs to use
         uses: actions/upload-artifact@v4
         with:
           name: sparta-app
           path: /tmp/sparta-app.tar.gz
   
-  Send:
+  Send: # Send archive to AWS VM
 
     needs: Package
     runs-on: ubuntu-24.04
     steps:
 
-      - name: Get code
+      - name: Get main branch
         uses: actions/checkout@v4
+        with:
+          ref: main
 
       - name: Download artifact
         uses: actions/download-artifact@v4
@@ -120,7 +122,7 @@ jobs:
           scp -o StrictHostKeyChecking=no \
             -i github-ec2.pem \
             ./artifact/sparta-app.tar.gz \
-            "${USER}@${HOST}:~/sparta-app.tar.gz"
+            "${EC2_USERNAME}@${USER}:~/sparta-app.tar.gz"
 
   Deploy:
 
@@ -135,6 +137,7 @@ jobs:
           USER: ${{ secrets.EC2_USERNAME }}
         run: |
           echo "$PRIVATE_KEY" > github-ec2.pem
+          chmod 600 github-ec2.pem
           ssh -o StrictHostKeyChecking=no \
             -i github-ec2.pem \
             "${USER}@${HOST}" \
