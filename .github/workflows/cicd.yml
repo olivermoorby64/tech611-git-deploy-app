@@ -56,8 +56,7 @@ jobs:
             --base main \
             --head dev \
             --title "Auto-merge dev into main" \
-            --body "Automated PR after successful dev tests." \
-            || true
+            --body "Automated PR after successful dev tests."
 
       - name: Enable auto-merge
         env:
