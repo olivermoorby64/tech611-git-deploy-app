@@ -116,8 +116,10 @@ jobs:
           HOST: ${{ secrets.EC2_HOSTNAME }}
           USER: ${{ secrets.EC2_USERNAME }}
         run: |
-          echo "$PRIVATE_KEY" > github-ec2.pem
+          printf '%s\n' "$PRIVATE_KEY" | tr -d '\r' > github-ec2.pem
           chmod 600 github-ec2.pem
+
+          ssh-keygen -y -f github-ec2.pem > /dev/null
 
           scp -o StrictHostKeyChecking=no \
             -i github-ec2.pem \
