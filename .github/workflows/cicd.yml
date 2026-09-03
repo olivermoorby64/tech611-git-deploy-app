@@ -124,7 +124,7 @@ jobs:
           scp -o StrictHostKeyChecking=no \
             -i github-ec2.pem \
             ./artifact/sparta-app.tar.gz \
-            "${USER}@${HOST}:/sparta-app.tar.gz"
+            "${USER}@${HOST}:~/sparta-app.tar.gz"
 
   Deploy:
 
@@ -144,11 +144,13 @@ jobs:
             -i github-ec2.pem \
             "${USER}@${HOST}" \
               '
-                rm -rf /sparta-app
-                mkdir -p /sparta-app
+                cd ~
 
-                tar -xzf ~/sparta-app.tar.gz -C /sparta-app
+                rm -rf ~/sparta-app
+                mkdir -p ~/sparta-app
 
-                cd /sparta-app
-                npm start
+                tar -xzf ~/sparta-app.tar.gz -C ~/sparta-app
+
+                cd ~/sparta-app
+                nohup npm start > app.log 2>&1 &
               '
