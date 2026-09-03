@@ -114,10 +114,13 @@ jobs:
           HOST: ${{ secrets.EC2_HOSTNAME }}
           USER: ${{ secrets.EC2_USERNAME }}
         run: |
+          echo "$PRIVATE_KEY" > github-ec2.pem
+          chmod 600 github-ec2.pem
+
           scp -o StrictHostKeyChecking=no \
-          =-i github-ec2.pem \
-          ./artifact/sparta-app.tar.gz \
-          ${EC2_USER}@${EC2_HOST}:~/sparta-app.tar.gz"
+            -i github-ec2.pem \
+            ./artifact/sparta-app.tar.gz \
+            "${USER}@${HOST}:~/sparta-app.tar.gz"
 
   Deploy:
 
@@ -131,18 +134,16 @@ jobs:
           HOST: ${{ secrets.EC2_HOSTNAME }}
           USER: ${{ secrets.EC2_USERNAME }}
         run: |
-          echo "$PRIVATE_KEY" > github-ec2.pem && chmod 600 github-ec2.pem
-          ssh -o StrictHostKeyChecking=no -i github-ec2.pem ${USER}@${HOST}
-        
-        # The command places the SSH key into a pem file and adjusts permissions
-        # Constructs command to connect to AWS VM
+          echo "$PRIVATE_KEY" > github-ec2.pem
+          ssh -o StrictHostKeyChecking=no \
+            -i github-ec2.pem \
+            "${USER}@${HOST}" \
+              '
+                rm -rf ~/sparta-app
+                mkdir -p ~/sparta-app
 
-      - name: Access delivery archive
-        run: |
-          mkdir -p ~/sparta-app
-          tar -xzf ~/sparta-app.tar.gz -C ~/sparta-app
-      
-      - name: Run app
-        run: |
-          cd ~/sparta-app
-          ls -a
+                tar -xzf ~/sparta-app.tar.gz -C ~/sparta-app
+
+                echo "Application deployed:"
+                ls -la ~/sparta-app
+              '
