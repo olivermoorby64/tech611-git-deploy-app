@@ -6,6 +6,9 @@ on:
     branches:
       - dev # When pushed to dev branch...
 
+permissions:
+  contents: write
+
 jobs: 
 
   Tests: # Run unit test job
