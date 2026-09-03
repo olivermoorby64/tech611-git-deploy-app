@@ -1,6 +1,7 @@
 name: CI/CD Pipeline
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - dev # When pushed to dev branch...
@@ -74,7 +75,7 @@ jobs:
       - name: Get code
         uses: actions/checkout@v4
 
-      - name: Create application archive
+      - name: Create application archive # Place app files into a compressed archive, will need to extract later
         run: |
           tar \
             --exclude='.git' \
@@ -93,7 +94,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
     
-      - name: Deploy to EC2
+      - name: Connect to EC2
         env:
           PRIVATE_KEY: ${{ secrets.EC2_PRIVATE_KEY }}
           HOST: ${{ secrets.EC2_HOST }}
@@ -104,3 +105,7 @@ jobs:
           echo "Current directory: $(pwd)"
           echo "Listing home directory:"
           ls -la ~
+        
+        # The command places the SSH key into a pem file and adjusts permissions
+        # Constructs command to connect to AWS VM
+        # Runs three basic commands to test functionality
