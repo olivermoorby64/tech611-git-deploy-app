@@ -6,10 +6,6 @@ on:
     branches:
       - dev # When pushed to dev branch...
 
-permissions:
-  contents: write
-  pull-requests: write
-
 jobs: 
 
   Tests: # Run unit test job
@@ -41,33 +37,37 @@ jobs:
 
   Merge:
     needs: Tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+
+    permissions:
+      contents: write
 
     steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
 
-      - name: Get code
-        uses: actions/checkout@v4 
-
-      - name: Create PR
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Configure Git
         run: |
-          gh pr create \
-            --base main \
-            --head dev \
-            --title "Auto-merge dev into main" \
-            --body "Automated PR after successful dev tests."
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-      - name: Enable auto-merge
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Merge dev into main
         run: |
-          gh pr merge dev \
-          --auto \
-          --squash
+          git fetch origin main dev
+
+          git merge origin/dev \
+            -X theirs \
+            --no-edit
+
+      - name: Push main
+        run: |
+          git push origin main
 
   Package: # Package the app ready for VM to use
-    needs: Tests
+    needs: Merge
     runs-on: ubuntu-24.04
 
     steps:
