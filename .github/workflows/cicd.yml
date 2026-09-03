@@ -107,4 +107,5 @@ jobs:
         
         # The command places the SSH key into a pem file and adjusts permissions
         # Constructs command to connect to AWS VM
-        # Runs three basic commands to test functionality (view directories)
+        # Runs three basic commands to test functionality:
+        # View current directory
