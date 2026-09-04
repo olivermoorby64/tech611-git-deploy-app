@@ -77,9 +77,10 @@ jobs:
     runs-on: ubuntu-24.04
 
     steps:
-      - name: Get code
+      - name: Get main branch
         uses: actions/checkout@v4
-
+        with:
+          ref: main
       - name: Archive app # Compress app into archive ready to be sent, must be extracted later
         run: |
           tar \
